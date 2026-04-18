@@ -14,10 +14,11 @@ let SQL: initSqlJs.SqlJsStatic | null = null;
  */
 async function getSql(): Promise<initSqlJs.SqlJsStatic> {
 	if (!SQL) {
-		// 指定 wasm 文件路径
-		const wasmPath = path.join(process.cwd(), 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+		// 在 Vercel/生产环境中，使用 public 目录中的 wasm 文件
+		// 在开发环境中，也使用 public 目录以保持一致性
 		SQL = await initSqlJs({
-			locateFile: () => wasmPath,
+			// 使用相对于根路径的 URL 来加载 wasm 文件
+			locateFile: (file) => `/${file}`,
 		});
 	}
 	return SQL;
