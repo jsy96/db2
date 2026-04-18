@@ -1,0 +1,9 @@
+{
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install --prefer-frozen-lockfile",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  }
+}

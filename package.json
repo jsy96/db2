@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "bash ./scripts/build.sh",
-    "dev": "bash ./scripts/dev.sh",
+    "build": "next build",
+    "build:server": "tsup src/server.ts --format cjs --platform node --target node20 --outDir dist --no-splitting --no-minify",
+    "dev": "next dev",
     "preinstall": "npx only-allow pnpm",
     "lint": "eslint",
-    "start": "bash ./scripts/start.sh",
-    "ts-check": "tsc -p tsconfig.json"
+    "start": "next start",
+    "ts-check": "tsc -p tsconfig.json",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.958.0",
