@@ -1,4 +1,3 @@
-import initSqlJs, { Database as SqlJsDatabase, BindParams } from 'sql.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -6,20 +5,37 @@ import * as path from 'path';
 const DB_PATH = path.join(process.cwd(), 'data', 'products.db');
 
 // 单例数据库实例
-let db: SqlJsDatabase | null = null;
-let SQL: initSqlJs.SqlJsStatic | null = null;
+let db: any = null;
+let SQL: any = null;
 
 /**
  * 获取 SQL.js 实例
  */
-async function getSql(): Promise<initSqlJs.SqlJsStatic> {
+async function getSql(): Promise<any> {
 	if (!SQL) {
-		// 在 Vercel/生产环境中，使用 public 目录中的 wasm 文件
-		// 在开发环境中，也使用 public 目录以保持一致性
-		SQL = await initSqlJs({
-			// 使用相对于根路径的 URL 来加载 wasm 文件
-			locateFile: (file) => `/${file}`,
-		});
+		try {
+			// 动态导入 sql.js
+			const initSqlJs = (await import('sql.js')).default;
+
+			// 使用 public 目录中的 wasm 文件
+			const wasmPath = path.join(process.cwd(), 'public', 'sql-wasm.wasm');
+
+			console.log('Loading SQL.js with WASM path:', wasmPath);
+
+			// 检查文件是否存在
+			if (!fs.existsSync(wasmPath)) {
+				throw new Error(`WASM file not found at: ${wasmPath}`);
+			}
+
+			SQL = await initSqlJs({
+				locateFile: () => wasmPath,
+			});
+
+			console.log('SQL.js initialized successfully');
+		} catch (error) {
+			console.error('Failed to initialize SQL.js:', error);
+			throw error;
+		}
 	}
 	return SQL;
 }
