@@ -9,32 +9,63 @@ let db: any = null;
 let SQL: any = null;
 
 /**
- * 获取 SQL.js 实例
+ * 获取 SQL.js 实例 - 使用 ASM.js 版本避免 WASM 问题
  */
 async function getSql(): Promise<any> {
 	if (!SQL) {
 		try {
-			// 动态导入 sql.js
-			const initSqlJs = (await import('sql.js')).default;
+			// 方法1：尝试使用 ASM.js 版本，它不需要 WASM 文件
+			console.log('Trying SQL.js ASM.js version...');
+			const initSqlJs = (await import('sql.js/dist/sql-asm.js')).default;
 
-			// 使用 public 目录中的 wasm 文件
-			const wasmPath = path.join(process.cwd(), 'public', 'sql-wasm.wasm');
+			// ASM.js 版本不需要 locateFile 配置
+			SQL = await initSqlJs();
+			console.log('SQL.js ASM.js version initialized successfully');
+		} catch (asmError) {
+			console.log('ASM.js version failed, trying WASM with direct file path...', asmError.message);
 
-			console.log('Loading SQL.js with WASM path:', wasmPath);
+			try {
+				// 方法2：尝试 WASM 版本，但使用绝对路径
+				const initSqlJs = (await import('sql.js')).default;
 
-			// 检查文件是否存在
-			if (!fs.existsSync(wasmPath)) {
-				throw new Error(`WASM file not found at: ${wasmPath}`);
+				// 尝试多种可能的路径
+				const possibleWasmPaths = [
+					// Vercel 生产环境路径
+					'/var/task/public/sql-wasm.wasm',
+					// 标准公共目录路径
+					path.join(process.cwd(), 'public', 'sql-wasm.wasm'),
+					// 相对 URL 路径
+					'/sql-wasm.wasm',
+				];
+
+				let success = false;
+				for (const wasmPath of possibleWasmPaths) {
+					try {
+						console.log(`Trying WASM path: ${wasmPath}`);
+						SQL = await initSqlJs({
+							locateFile: () => wasmPath,
+						});
+						console.log(`SQL.js initialized with path: ${wasmPath}`);
+						success = true;
+						break;
+					} catch (pathError) {
+						console.log(`Path ${wasmPath} failed: ${pathError.message}`);
+						continue;
+					}
+				}
+
+				if (!success) {
+					throw new Error('All WASM path attempts failed');
+				}
+			} catch (wasmError) {
+				console.error('WASM version also failed:', wasmError.message);
+
+				// 方法3：如果所有方法都失败，使用内存数据库或抛出错误
+				throw new Error(`无法初始化数据库。SQL.js 在 Vercel 环境中无法加载 WASM 文件。考虑：
+1. 使用云数据库（如 Vercel Postgres、Supabase）
+2. 或使用简单的 JSON 文件存储
+3. 或联系支持获取帮助`);
 			}
-
-			SQL = await initSqlJs({
-				locateFile: () => wasmPath,
-			});
-
-			console.log('SQL.js initialized successfully');
-		} catch (error) {
-			console.error('Failed to initialize SQL.js:', error);
-			throw error;
 		}
 	}
 	return SQL;
